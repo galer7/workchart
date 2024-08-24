@@ -9,6 +9,7 @@ import {
   MarkerType,
   Connection,
   Node,
+  ConnectionMode,
 } from "reactflow";
 import "reactflow/dist/style.css";
 import { Button } from "@/components/ui/button";
@@ -36,6 +37,10 @@ const FlowchartBuilder = () => {
     rfInstance,
     setRfInstance,
   } = useFlowchartState();
+
+  console.log("Nodes:", nodes); // Debug log
+  console.log("Edges:", edges); // Debug log
+
   const [showOptions, setShowOptions] = useState(false);
   const [optionsPosition, setOptionsPosition] = useState({ x: 0, y: 0 });
   const reactFlowInstance = useReactFlow();
@@ -65,11 +70,12 @@ const FlowchartBuilder = () => {
   const onCanvasDoubleClick = useCallback(
     (event) => {
       event.preventDefault();
+      const boundingRect = event.target.getBoundingClientRect();
       const position = reactFlowInstance.screenToFlowPosition({
-        x: event.clientX,
-        y: event.clientY,
+        x: event.clientX - boundingRect.left,
+        y: event.clientY - boundingRect.top,
       });
-      setOptionsPosition(position);
+      setOptionsPosition(reactFlowInstance.flowToScreenPosition(position));
       setShowOptions(true);
     },
     [reactFlowInstance]
@@ -117,16 +123,32 @@ const FlowchartBuilder = () => {
         }}
       >
         <h3>Mermaid Code</h3>
+        <div className="flex gap-4">
+          <Button
+            onClick={copyToClipboard}
+            className="mb-4 bg-blue-500 hover:bg-blue-600 text-white"
+          >
+            {copySuccess ? "Copied!" : "Copy to Clipboard"}
+          </Button>
+          {/* button to clear all state */}
+          <Button
+            onClick={() => {
+              setNodes([]);
+              setEdges([]);
+            }}
+            className="mb-4 bg-red-500 hover:bg-red-600 text-white"
+          >
+            Clear All
+          </Button>
+        </div>
+
         <pre style={{ whiteSpace: "pre-wrap", wordBreak: "break-all" }}>
           {mermaidCode}
         </pre>
-        <Button onClick={copyToClipboard}>
-          {copySuccess ? "Copied!" : "Copy to Clipboard"}
-        </Button>
       </div>
       <div style={{ flex: 1, position: "relative" }}>
         <ReactFlow
-          connectionMode="loose"
+          connectionMode={ConnectionMode.Loose}
           nodes={nodes}
           edges={edges}
           onNodesChange={onNodesChange}

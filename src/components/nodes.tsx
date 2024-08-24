@@ -17,37 +17,39 @@ const NodeWrapper: React.FC<NodeProps<NodeData>> = ({ id, data, children }) => {
     []
   );
 
-  const handleKeyDown = useCallback(
-    (event: React.KeyboardEvent) => {
-      if (event.key === "Enter") {
-        setIsEditing(false);
-        setNodes((nds) =>
-          nds.map((node) => {
-            if (node.id === id) {
-              node.data = { ...node.data, label: label };
-            }
-            return node;
-          })
-        );
-      }
-    },
-    [id, label, setNodes]
-  );
+  const handleBlur = useCallback(() => {
+    setIsEditing(false);
+    setNodes((nds) =>
+      nds.map((node) => {
+        if (node.id === id) {
+          node.data = { ...node.data, label: label };
+        }
+        return node;
+      })
+    );
+  }, [id, label, setNodes]);
+
+  const handleDoubleClick = useCallback((event: React.MouseEvent) => {
+    event.stopPropagation();
+    setIsEditing(true);
+  }, []);
 
   return (
-    <div onClick={() => setIsEditing(true)}>
-      {isEditing ? (
-        <input
-          type="text"
-          value={label}
-          onChange={handleLabelChange}
-          onKeyDown={handleKeyDown}
-          autoFocus
-          className="nodrag"
-        />
-      ) : (
-        children
-      )}
+    <div onDoubleClick={handleDoubleClick}>
+      {React.cloneElement(children as React.ReactElement, {
+        children: isEditing ? (
+          <input
+            type="text"
+            value={label}
+            onChange={handleLabelChange}
+            onBlur={handleBlur}
+            autoFocus
+            className="nodrag w-full bg-transparent text-center focus:outline-none"
+          />
+        ) : (
+          data.label
+        ),
+      })}
       <Handle
         type="source"
         position={Position.Bottom}
@@ -72,7 +74,7 @@ const NodeWrapper: React.FC<NodeProps<NodeData>> = ({ id, data, children }) => {
 export const StateNode: React.FC<NodeProps<NodeData>> = ({ id, data }) => (
   <NodeWrapper id={id} data={data}>
     <div className="px-4 py-2 shadow-md rounded-full bg-gray-200 w-20 h-20 flex items-center justify-center">
-      <div>{data.label}</div>
+      <div className="w-full text-center">{data.label}</div>
     </div>
   </NodeWrapper>
 );
@@ -80,7 +82,7 @@ export const StateNode: React.FC<NodeProps<NodeData>> = ({ id, data }) => (
 export const ActionNode: React.FC<NodeProps<NodeData>> = ({ id, data }) => (
   <NodeWrapper id={id} data={data}>
     <div className="px-4 py-2 shadow-md rounded-md bg-blue-200">
-      <div>{data.label}</div>
+      <div className="w-full text-center">{data.label}</div>
     </div>
   </NodeWrapper>
 );
@@ -89,9 +91,21 @@ export const ChoiceNode: React.FC<NodeProps<NodeData>> = ({ id, data }) => (
   <NodeWrapper id={id} data={data}>
     <div
       className="px-4 py-2 shadow-md bg-green-200"
-      style={{ transform: "rotate(45deg)" }}
+      style={{
+        transform: "rotate(45deg)",
+        width: "100px",
+        height: "100px",
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "center",
+      }}
     >
-      <div style={{ transform: "rotate(-45deg)" }}>{data.label}</div>
+      <div
+        style={{ transform: "rotate(-45deg)", width: "100%" }}
+        className="text-center"
+      >
+        {data.label}
+      </div>
     </div>
   </NodeWrapper>
 );
