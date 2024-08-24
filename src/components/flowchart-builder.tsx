@@ -39,7 +39,7 @@ const FlowchartBuilder = () => {
   const [showOptions, setShowOptions] = useState(false);
   const [optionsPosition, setOptionsPosition] = useState({ x: 0, y: 0 });
   const reactFlowInstance = useReactFlow();
-  const { generateMermaidCode, copyToClipboard, copySuccess } =
+  const { mermaidCode, generateMermaidCode, copyToClipboard, copySuccess } =
     useMermaidCode();
 
   // Load from localStorage on initial render
@@ -53,18 +53,19 @@ const FlowchartBuilder = () => {
     }
   }, [setNodes, setEdges, reactFlowInstance]);
 
-  // Save to localStorage whenever nodes or edges change
+  // Save to localStorage and generate Mermaid code whenever nodes or edges change
   useEffect(() => {
     if (rfInstance) {
       const flow = rfInstance.toObject();
       localStorage.setItem(flowKey, JSON.stringify(flow));
+      generateMermaidCode(nodes, edges);
     }
-  }, [nodes, edges, rfInstance]);
+  }, [nodes, edges, rfInstance, generateMermaidCode]);
 
   const onCanvasDoubleClick = useCallback(
     (event) => {
       event.preventDefault();
-      const position = reactFlowInstance.project({
+      const position = reactFlowInstance.screenToFlowPosition({
         x: event.clientX,
         y: event.clientY,
       });
@@ -92,11 +93,6 @@ const FlowchartBuilder = () => {
     [optionsPosition, nodes.length, setNodes]
   );
 
-  const handleExportMermaid = () => {
-    const mermaidCode = generateMermaidCode(nodes, edges);
-    copyToClipboard(mermaidCode);
-  };
-
   const onConnect = useCallback(
     (params: Connection) => {
       const newEdge: Edge = {
@@ -112,60 +108,64 @@ const FlowchartBuilder = () => {
   );
 
   return (
-    <div style={{ width: "100vw", height: "100vh", position: "relative" }}>
-      <ReactFlow
-        connectionMode="loose"
-        nodes={nodes}
-        edges={edges}
-        onNodesChange={onNodesChange}
-        onEdgesChange={onEdgesChange}
-        onConnect={onConnect}
-        nodeTypes={nodeTypes}
-        onDoubleClick={onCanvasDoubleClick}
-        onClick={onCanvasClick}
-        onInit={setRfInstance}
-        zoomOnDoubleClick={false}
-        fitView
-      >
-        <Controls />
-        <Background gap={12} size={1} />
-      </ReactFlow>
-
+    <div style={{ display: "flex", width: "100vw", height: "100vh" }}>
       <div
         style={{
-          position: "absolute",
-          top: "10px",
-          right: "10px",
-          zIndex: 1000,
+          width: "300px",
+          padding: "20px",
+          borderRight: "1px solid #ccc",
         }}
       >
-        <Button onClick={handleExportMermaid}>
-          {copySuccess ? "Mermaid Copied!" : "Export to Mermaid"}
+        <h3>Mermaid Code</h3>
+        <pre style={{ whiteSpace: "pre-wrap", wordBreak: "break-all" }}>
+          {mermaidCode}
+        </pre>
+        <Button onClick={copyToClipboard}>
+          {copySuccess ? "Copied!" : "Copy to Clipboard"}
         </Button>
       </div>
-
-      {showOptions && (
-        <div
-          style={{
-            position: "absolute",
-            left: optionsPosition.x,
-            top: optionsPosition.y,
-            zIndex: 1000,
-            background: "white",
-            border: "1px solid #ccc",
-            borderRadius: "4px",
-            padding: "8px",
-            display: "flex",
-            flexDirection: "column",
-            gap: "4px",
-          }}
-          onClick={(e) => e.stopPropagation()}
+      <div style={{ flex: 1, position: "relative" }}>
+        <ReactFlow
+          connectionMode="loose"
+          nodes={nodes}
+          edges={edges}
+          onNodesChange={onNodesChange}
+          onEdgesChange={onEdgesChange}
+          onConnect={onConnect}
+          nodeTypes={nodeTypes}
+          onDoubleClick={onCanvasDoubleClick}
+          onClick={onCanvasClick}
+          onInit={setRfInstance}
+          zoomOnDoubleClick={false}
+          fitView
         >
-          <Button onClick={() => addNode("action")}>Action</Button>
-          <Button onClick={() => addNode("state")}>State</Button>
-          <Button onClick={() => addNode("choice")}>Condition</Button>
-        </div>
-      )}
+          <Controls />
+          <Background gap={12} size={1} />
+        </ReactFlow>
+
+        {showOptions && (
+          <div
+            style={{
+              position: "absolute",
+              left: optionsPosition.x,
+              top: optionsPosition.y,
+              zIndex: 1000,
+              background: "white",
+              border: "1px solid #ccc",
+              borderRadius: "4px",
+              padding: "8px",
+              display: "flex",
+              flexDirection: "column",
+              gap: "4px",
+            }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <Button onClick={() => addNode("action")}>Action</Button>
+            <Button onClick={() => addNode("state")}>State</Button>
+            <Button onClick={() => addNode("choice")}>Condition</Button>
+          </div>
+        )}
+      </div>
     </div>
   );
 };

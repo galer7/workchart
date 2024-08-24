@@ -37,6 +37,7 @@ export const useFlowchartState = () => {
   return {
     nodes,
     edges,
+    rfInstance,
     setNodes,
     setEdges,
     onNodesChange,

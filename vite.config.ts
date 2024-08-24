@@ -9,4 +9,6 @@ export default defineConfig({
       "@": path.resolve(__dirname, "./src"),
     },
   },
+  // if in github ci, set base to /workchart/
+  base: process.env.GITHUB_ACTIONS ? "/workchart/" : "/",
 });
