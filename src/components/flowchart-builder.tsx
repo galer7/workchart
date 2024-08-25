@@ -132,37 +132,50 @@ const FlowchartBuilder = () => {
           width: "300px",
           padding: "20px",
           borderRight: "1px solid #ccc",
+          display: "flex",
+          flexDirection: "column",
         }}
       >
-        <h3>Mermaid Code</h3>
-        <div className="flex flex-col gap-2">
-          <Button
-            onClick={copyToClipboard}
-            className="bg-blue-500 hover:bg-blue-600 text-white"
+        <div style={{ flex: 1 }}>
+          <h1 className="text-5xl mb-5">Workchart = Workflow + Flowchart</h1>
+          <h3>Mermaid Code</h3>
+          <div className="flex flex-col gap-2">
+            <Button
+              onClick={copyToClipboard}
+              className="bg-blue-500 hover:bg-blue-600 text-white"
+            >
+              {copySuccess ? "Copied!" : "Copy to Clipboard"}
+            </Button>
+            <Button
+              onClick={copyToClipboardWithMermaidPrefix}
+              className="bg-blue-500 hover:bg-blue-600 text-white"
+            >
+              {copyWithMermaidPrefixSuccess
+                ? "Copied!"
+                : "Copy with Mermaid Prefix"}
+            </Button>
+          </div>
+          <pre
+            style={{
+              whiteSpace: "pre-wrap",
+              wordBreak: "break-all",
+              marginTop: "10px",
+            }}
           >
-            {copySuccess ? "Copied!" : "Copy to Clipboard"}
-          </Button>
-          <Button
-            onClick={copyToClipboardWithMermaidPrefix}
-            className="bg-blue-500 hover:bg-blue-600 text-white"
-          >
-            {copyWithMermaidPrefixSuccess
-              ? "Copied!"
-              : "Copy with Mermaid Prefix"}
-          </Button>
+            {mermaidCode}
+          </pre>
+        </div>
+        <div style={{ marginTop: "auto" }}>
           <Button
             onClick={() => {
               setNodes([]);
               setEdges([]);
             }}
-            className="bg-red-500 hover:bg-red-600 text-white"
+            className="bg-red-500 hover:bg-red-600 text-white w-full"
           >
             Clear All
           </Button>
         </div>
-        <pre style={{ whiteSpace: "pre-wrap", wordBreak: "break-all" }}>
-          {mermaidCode}
-        </pre>
       </div>
 
       {/* ReactFlow canvas */}
