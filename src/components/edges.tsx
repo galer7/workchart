@@ -1,4 +1,4 @@
-import { FC, useCallback, useState } from "react";
+import React, { FC, useCallback, useState } from "react";
 import {
   getBezierPath,
   EdgeProps,
@@ -8,6 +8,7 @@ import {
 } from "reactflow";
 import { Button } from "@/components/ui/button";
 import { Plus } from "lucide-react";
+import { Input } from "@/components/ui/input";
 
 const CustomEdge: FC<EdgeProps> = ({
   id,
@@ -21,8 +22,11 @@ const CustomEdge: FC<EdgeProps> = ({
   targetPosition,
   style = {},
   markerEnd,
+  data,
 }) => {
   const [showOptions, setShowOptions] = useState(false);
+  const [isEditing, setIsEditing] = useState(false);
+  const [labelText, setLabelText] = useState(data?.label || "");
   const { setEdges, setNodes, getNode, getEdge, getNodes } = useReactFlow();
 
   const [edgePath, labelX, labelY] = getBezierPath({
@@ -37,6 +41,30 @@ const CustomEdge: FC<EdgeProps> = ({
   const onPlusClick = (event) => {
     event.stopPropagation();
     setShowOptions(true);
+  };
+
+  const onDoubleClick = (event) => {
+    event.stopPropagation();
+    setIsEditing(true);
+  };
+
+  const onLabelChange = (event) => {
+    setLabelText(event.target.value);
+  };
+
+  const onLabelBlur = () => {
+    setIsEditing(false);
+    setEdges((edges) =>
+      edges.map((edge) => {
+        if (edge.id === id) {
+          return {
+            ...edge,
+            data: { ...edge.data, label: labelText },
+          };
+        }
+        return edge;
+      })
+    );
   };
 
   const addNodeOnEdge = useCallback(
@@ -85,7 +113,18 @@ const CustomEdge: FC<EdgeProps> = ({
 
       setShowOptions(false);
     },
-    [id, source, target, labelX, labelY, setNodes, setEdges, getNode, getEdge]
+    [
+      id,
+      source,
+      target,
+      labelX,
+      labelY,
+      setNodes,
+      setEdges,
+      getNode,
+      getEdge,
+      getNodes,
+    ]
   );
 
   return (
@@ -97,20 +136,32 @@ const CustomEdge: FC<EdgeProps> = ({
             position: "absolute",
             transform: `translate(-50%, -50%) translate(${labelX}px,${labelY}px)`,
             fontSize: 12,
-            // everything inside EdgeLabelRenderer has no pointer events by default
-            // if you have an interactive element, set pointer-events: all
             pointerEvents: "all",
           }}
           className="nodrag nopan"
         >
+          {isEditing ? (
+            <Input
+              type="text"
+              value={labelText}
+              onChange={onLabelChange}
+              onBlur={onLabelBlur}
+              autoFocus
+              className="w-32"
+            />
+          ) : (
+            <div onDoubleClick={onDoubleClick} className="cursor-pointer">
+              {labelText || "Double-click to edit"}
+            </div>
+          )}
           <Button
             onClick={onPlusClick}
-            className="rounded-full w-5 h-5 flex items-center justify-center bg-pink-700 border border-gray-300 hover:bg-gray-100 nodrag"
+            className="rounded-full w-5 h-5 flex items-center justify-center bg-pink-700 border border-gray-300 hover:bg-gray-100 nodrag mt-1"
           >
             <Plus size={12} className="text-white" />
           </Button>
           {showOptions && (
-            <div className="bg-white border border-gray-300 rounded p-2 flex flex-col gap-2">
+            <div className="bg-white border border-gray-300 rounded p-2 flex flex-col gap-2 mt-1">
               <Button onClick={() => addNodeOnEdge("action")}>Action</Button>
               <Button onClick={() => addNodeOnEdge("state")}>State</Button>
               <Button onClick={() => addNodeOnEdge("choice")}>Condition</Button>

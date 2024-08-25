@@ -31,7 +31,7 @@ export const useMermaidCode = () => {
         ?.data.label.replace(/\s+/g, "_");
       if (sourceId && targetId) {
         code += `  ${sourceId} -->${
-          edge.label ? `|${edge.label}|` : ""
+          edge?.data?.label ? `|${edge.data.label}|` : ""
         } ${targetId}\n`;
       }
     });

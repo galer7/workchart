@@ -80,7 +80,6 @@ const FlowchartBuilder = () => {
 
   const onCanvasDoubleClick = useCallback(
     (event) => {
-      console.log("[onCanvasDoubleClick] event:", event); // Debug log
       const reactFlowBounds = reactFlowWrapper.current?.getBoundingClientRect();
       const position = reactFlowInstance.screenToFlowPosition({
         x: event.clientX - reactFlowBounds.left,
