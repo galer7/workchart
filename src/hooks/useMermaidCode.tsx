@@ -3,6 +3,8 @@ import { useState, useCallback } from "react";
 export const useMermaidCode = () => {
   const [mermaidCode, setMermaidCode] = useState("");
   const [copySuccess, setCopySuccess] = useState(false);
+  const [copyWithMermaidPrefixSuccess, setCopyWithMermaidPrefixSuccess] =
+    useState(false);
 
   const generateMermaidCode = useCallback((nodes, edges) => {
     let code = "graph TD\n";
@@ -28,7 +30,9 @@ export const useMermaidCode = () => {
         .find((n) => n.id === edge.target)
         ?.data.label.replace(/\s+/g, "_");
       if (sourceId && targetId) {
-        code += `  ${sourceId} -->|${edge.label || ""}| ${targetId}\n`;
+        code += `  ${sourceId} -->${
+          edge.label ? `|${edge.label}|` : ""
+        } ${targetId}\n`;
       }
     });
     setMermaidCode(code);
@@ -44,5 +48,24 @@ export const useMermaidCode = () => {
     }
   };
 
-  return { mermaidCode, generateMermaidCode, copyToClipboard, copySuccess };
+  const copyToClipboardWithMermaidPrefix = async () => {
+    try {
+      await navigator.clipboard.writeText(
+        `\`\`\`mermaid\n${mermaidCode}\n\`\`\``
+      );
+      setCopyWithMermaidPrefixSuccess(true);
+      setTimeout(() => setCopyWithMermaidPrefixSuccess(false), 2000);
+    } catch (err) {
+      console.error("Failed to copy text: ", err);
+    }
+  };
+
+  return {
+    mermaidCode,
+    generateMermaidCode,
+    copyToClipboard,
+    copyToClipboardWithMermaidPrefix,
+    copySuccess,
+    copyWithMermaidPrefixSuccess,
+  };
 };

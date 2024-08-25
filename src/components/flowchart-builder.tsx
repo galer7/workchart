@@ -1,4 +1,4 @@
-import { useState, useCallback, useEffect } from "react";
+import { useState, useCallback, useEffect, useRef } from "react";
 import {
   ReactFlow,
   ReactFlowProvider,
@@ -16,14 +16,18 @@ import { Button } from "@/components/ui/button";
 import { useFlowchartState } from "@/hooks/useFlowchartState";
 import { useMermaidCode } from "@/hooks/useMermaidCode";
 import { StateNode, ActionNode, ChoiceNode } from "./nodes";
+import CustomEdge from "./edges";
 
 const flowKey = "flowchart-state";
-const getNodeId = () => `node_${+new Date()}`;
 
 const nodeTypes = {
   state: StateNode,
   action: ActionNode,
   choice: ChoiceNode,
+};
+
+const edgeTypes = {
+  custom: CustomEdge,
 };
 
 const FlowchartBuilder = () => {
@@ -38,14 +42,21 @@ const FlowchartBuilder = () => {
     setRfInstance,
   } = useFlowchartState();
 
-  console.log("Nodes:", nodes); // Debug log
-  console.log("Edges:", edges); // Debug log
-
-  const [showOptions, setShowOptions] = useState(false);
-  const [optionsPosition, setOptionsPosition] = useState({ x: 0, y: 0 });
+  const reactFlowWrapper = useRef(null);
+  const [showCanvasOptions, setShowCanvasOptions] = useState(false);
+  const [canvasOptionsPosition, setCanvasOptionsPosition] = useState({
+    x: 0,
+    y: 0,
+  });
   const reactFlowInstance = useReactFlow();
-  const { mermaidCode, generateMermaidCode, copyToClipboard, copySuccess } =
-    useMermaidCode();
+  const {
+    mermaidCode,
+    generateMermaidCode,
+    copyToClipboard,
+    copyToClipboardWithMermaidPrefix,
+    copySuccess,
+    copyWithMermaidPrefixSuccess,
+  } = useMermaidCode();
 
   // Load from localStorage on initial render
   useEffect(() => {
@@ -69,41 +80,42 @@ const FlowchartBuilder = () => {
 
   const onCanvasDoubleClick = useCallback(
     (event) => {
-      event.preventDefault();
-      const boundingRect = event.target.getBoundingClientRect();
+      console.log("[onCanvasDoubleClick] event:", event); // Debug log
+      const reactFlowBounds = reactFlowWrapper.current?.getBoundingClientRect();
       const position = reactFlowInstance.screenToFlowPosition({
-        x: event.clientX - boundingRect.left,
-        y: event.clientY - boundingRect.top,
+        x: event.clientX - reactFlowBounds.left,
+        y: event.clientY - reactFlowBounds.top,
       });
-      setOptionsPosition(reactFlowInstance.flowToScreenPosition(position));
-      setShowOptions(true);
+      setCanvasOptionsPosition(position);
+      setShowCanvasOptions(true);
     },
     [reactFlowInstance]
   );
 
   const onCanvasClick = useCallback(() => {
-    setShowOptions(false);
+    setShowCanvasOptions(false);
   }, []);
 
-  const addNode = useCallback(
+  const addNodeOnCanvas = useCallback(
     (type: string) => {
       const newNode: Node = {
-        id: getNodeId(),
+        id: `${type}-${nodes.length + 1}`,
         type,
-        position: optionsPosition,
+        position: canvasOptionsPosition,
         data: { label: `${type} ${nodes.length + 1}` },
       };
       setNodes((nds) => nds.concat(newNode));
-      setShowOptions(false);
+      setShowCanvasOptions(false);
     },
-    [optionsPosition, nodes.length, setNodes]
+    [nodes.length, canvasOptionsPosition, setNodes]
   );
 
   const onConnect = useCallback(
     (params: Connection) => {
       const newEdge: Edge = {
         ...params,
-        type: "default",
+        id: `${params.source}-${params.target}`,
+        type: "custom",
         markerEnd: {
           type: MarkerType.ArrowClosed,
         },
@@ -115,6 +127,7 @@ const FlowchartBuilder = () => {
 
   return (
     <div style={{ display: "flex", width: "100vw", height: "100vh" }}>
+      {/* Sidebar content */}
       <div
         style={{
           width: "300px",
@@ -123,30 +136,38 @@ const FlowchartBuilder = () => {
         }}
       >
         <h3>Mermaid Code</h3>
-        <div className="flex gap-4">
+        <div className="flex flex-col gap-2">
           <Button
             onClick={copyToClipboard}
-            className="mb-4 bg-blue-500 hover:bg-blue-600 text-white"
+            className="bg-blue-500 hover:bg-blue-600 text-white"
           >
             {copySuccess ? "Copied!" : "Copy to Clipboard"}
           </Button>
-          {/* button to clear all state */}
+          <Button
+            onClick={copyToClipboardWithMermaidPrefix}
+            className="bg-blue-500 hover:bg-blue-600 text-white"
+          >
+            {copyWithMermaidPrefixSuccess
+              ? "Copied!"
+              : "Copy with Mermaid Prefix"}
+          </Button>
           <Button
             onClick={() => {
               setNodes([]);
               setEdges([]);
             }}
-            className="mb-4 bg-red-500 hover:bg-red-600 text-white"
+            className="bg-red-500 hover:bg-red-600 text-white"
           >
             Clear All
           </Button>
         </div>
-
         <pre style={{ whiteSpace: "pre-wrap", wordBreak: "break-all" }}>
           {mermaidCode}
         </pre>
       </div>
-      <div style={{ flex: 1, position: "relative" }}>
+
+      {/* ReactFlow canvas */}
+      <div style={{ flex: 1, height: "100%" }} ref={reactFlowWrapper}>
         <ReactFlow
           connectionMode={ConnectionMode.Loose}
           nodes={nodes}
@@ -155,9 +176,11 @@ const FlowchartBuilder = () => {
           onEdgesChange={onEdgesChange}
           onConnect={onConnect}
           nodeTypes={nodeTypes}
+          edgeTypes={edgeTypes}
           onDoubleClick={onCanvasDoubleClick}
           onClick={onCanvasClick}
           onInit={setRfInstance}
+          defaultEdgeOptions={{ type: "custom" }}
           zoomOnDoubleClick={false}
           fitView
         >
@@ -165,12 +188,16 @@ const FlowchartBuilder = () => {
           <Background gap={12} size={1} />
         </ReactFlow>
 
-        {showOptions && (
+        {/* Canvas options menu */}
+        {showCanvasOptions && (
           <div
             style={{
               position: "absolute",
-              left: optionsPosition.x,
-              top: optionsPosition.y,
+              left: reactFlowInstance.flowToScreenPosition(
+                canvasOptionsPosition
+              ).x,
+              top: reactFlowInstance.flowToScreenPosition(canvasOptionsPosition)
+                .y,
               zIndex: 1000,
               background: "white",
               border: "1px solid #ccc",
@@ -180,11 +207,10 @@ const FlowchartBuilder = () => {
               flexDirection: "column",
               gap: "4px",
             }}
-            onClick={(e) => e.stopPropagation()}
           >
-            <Button onClick={() => addNode("action")}>Action</Button>
-            <Button onClick={() => addNode("state")}>State</Button>
-            <Button onClick={() => addNode("choice")}>Condition</Button>
+            <Button onClick={() => addNodeOnCanvas("action")}>Action</Button>
+            <Button onClick={() => addNodeOnCanvas("state")}>State</Button>
+            <Button onClick={() => addNodeOnCanvas("choice")}>Condition</Button>
           </div>
         )}
       </div>

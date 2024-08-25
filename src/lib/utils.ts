@@ -6,7 +6,7 @@ export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs));
 }
 
-const getNextIndex = (nodes: Node[], type) => {
+export const getNextIndex = (nodes: Node[], type) => {
   const typeNodes = nodes.filter(
     (node) => node.data.name?.startsWith(type) || false
   );
@@ -29,5 +29,3 @@ const getNextIndex = (nodes: Node[], type) => {
   const maxIndex = Math.max(...existingIndices);
   return maxIndex + 1;
 };
-
-export default getNextIndex;
