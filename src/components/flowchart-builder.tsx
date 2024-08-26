@@ -159,6 +159,14 @@ const FlowchartBuilder = () => {
       return "state"; // default to state if unclear
     };
 
+    const extractLabel = (line: string): string => {
+      const match = line.match(/\(\((.*?)\)\)|\[(.*?)\]|\{(.*?)\}/);
+      if (match) {
+        return match[1] || match[2] || match[3] || line.trim();
+      }
+      return line.trim();
+    };
+
     // First pass: create adjacency list and identify all nodes
     lines.forEach((line) => {
       const trimmedLine = line.trim();
@@ -182,14 +190,14 @@ const FlowchartBuilder = () => {
             depth: 0,
             column: 0,
             type: getNodeType(source),
-            label: source.trim(),
+            label: extractLabel(source),
           };
         if (!nodeMap[targetId])
           nodeMap[targetId] = {
             depth: 0,
             column: 0,
             type: getNodeType(target),
-            label: target.trim(),
+            label: extractLabel(target),
           };
       } else if (trimmedLine && !trimmedLine.startsWith("graph")) {
         const id = trimmedLine.split(/[\s([{]/)[0];
@@ -198,7 +206,7 @@ const FlowchartBuilder = () => {
             depth: 0,
             column: 0,
             type: getNodeType(trimmedLine),
-            label: trimmedLine,
+            label: extractLabel(trimmedLine),
           };
       }
     });
