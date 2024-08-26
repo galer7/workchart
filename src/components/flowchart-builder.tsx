@@ -17,6 +17,17 @@ import { useFlowchartState } from "@/hooks/useFlowchartState";
 import { useMermaidCode } from "@/hooks/useMermaidCode";
 import { StateNode, ActionNode, ChoiceNode } from "./nodes";
 import CustomEdge from "./edges";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
+import { Textarea } from "@/components/ui/textarea";
 
 const flowKey = "flowchart-state";
 
@@ -57,6 +68,10 @@ const FlowchartBuilder = () => {
     copySuccess,
     copyWithMermaidPrefixSuccess,
   } = useMermaidCode();
+
+  // New state for Mermaid import
+  const [mermaidImport, setMermaidImport] = useState("");
+  const [showImportDialog, setShowImportDialog] = useState(false);
 
   // Load from localStorage on initial render
   useEffect(() => {
@@ -124,6 +139,70 @@ const FlowchartBuilder = () => {
     [setEdges]
   );
 
+  // Function to parse Mermaid code and create nodes/edges
+  const parseMermaidCode = (mermaidCode: string) => {
+    const lines = mermaidCode.split("\n");
+    const newNodes: Node[] = [];
+    const newEdges: Edge[] = [];
+    const nodeMap: { [key: string]: boolean } = {};
+
+    lines.forEach((line, index) => {
+      const trimmedLine = line.trim();
+      if (trimmedLine.includes("-->")) {
+        const [source, target] = trimmedLine.split("-->").map((s) => s.trim());
+        newEdges.push({
+          id: `e${index}`,
+          source,
+          target,
+          type: "custom",
+          markerEnd: { type: MarkerType.ArrowClosed },
+        });
+      } else if (trimmedLine && !trimmedLine.startsWith("graph")) {
+        let id, label;
+        if (trimmedLine.includes("[")) {
+          [id, label] = trimmedLine.split("[");
+          label = label.slice(0, -1); // Remove the closing bracket
+        } else {
+          id = trimmedLine;
+          label = trimmedLine;
+        }
+        id = id.trim();
+        if (!nodeMap[id]) {
+          newNodes.push({
+            id: id,
+            type: "action", // Default to action type
+            position: {
+              x: 100 * (newNodes.length + 1),
+              y: 100 * (newNodes.length + 1),
+            },
+            data: { label: label || id },
+          });
+          nodeMap[id] = true;
+        }
+      }
+    });
+
+    return { nodes: newNodes, edges: newEdges };
+  };
+
+  // New function to handle Mermaid import
+  const handleMermaidImport = () => {
+    if (nodes.length > 0 || edges.length > 0) {
+      setShowImportDialog(true);
+    } else {
+      confirmImport();
+    }
+  };
+
+  const confirmImport = () => {
+    const { nodes: newNodes, edges: newEdges } =
+      parseMermaidCode(mermaidImport);
+    setNodes(newNodes);
+    setEdges(newEdges);
+    setMermaidImport("");
+    setShowImportDialog(false);
+  };
+
   return (
     <div style={{ display: "flex", width: "100vw", height: "100vh" }}>
       {/* Sidebar content */}
@@ -134,6 +213,7 @@ const FlowchartBuilder = () => {
           borderRight: "1px solid #ccc",
           display: "flex",
           flexDirection: "column",
+          overflowY: "auto",
         }}
       >
         <div style={{ flex: 1 }}>
@@ -164,6 +244,25 @@ const FlowchartBuilder = () => {
           >
             {mermaidCode}
           </pre>
+
+          {/* Mermaid import section */}
+          <h3 className="mt-5">Import Mermaid Code</h3>
+          <Textarea
+            value={mermaidImport}
+            onChange={(e) => setMermaidImport(e.target.value)}
+            placeholder="Paste your Mermaid code here"
+            className="mt-2"
+            style={{
+              maxHeight: "200px",
+              overflowY: "auto",
+            }}
+          />
+          <Button
+            onClick={handleMermaidImport}
+            className="mt-2 bg-green-500 hover:bg-green-600 text-white"
+          >
+            Import Mermaid Code
+          </Button>
         </div>
         <div style={{ marginTop: "auto" }}>
           <Button
@@ -226,6 +325,28 @@ const FlowchartBuilder = () => {
           </div>
         )}
       </div>
+
+      {/* Import confirmation dialog */}
+      <AlertDialog open={showImportDialog} onOpenChange={setShowImportDialog}>
+        <AlertDialogContent className="bg-white">
+          <AlertDialogHeader>
+            <AlertDialogTitle>Confirm Import</AlertDialogTitle>
+            <AlertDialogDescription>
+              There are existing nodes or edges in the flowchart. Importing new
+              Mermaid code will replace the current flowchart. Are you sure you
+              want to proceed?
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogAction onClick={() => setShowImportDialog(false)}>
+              Cancel
+            </AlertDialogAction>
+            <AlertDialogAction onClick={confirmImport}>
+              Confirm
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 };
