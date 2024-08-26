@@ -164,12 +164,15 @@ const FlowchartBuilder = () => {
       const trimmedLine = line.trim();
       if (trimmedLine.includes("-->")) {
         const [source, rest] = trimmedLine.split("-->");
-        const [, target] = rest.includes("|") ? rest.split("|") : ["", rest];
 
-        console.log(source, target);
+        // Fix: Correctly parse the target, skipping edge labels
+        const parts = rest.split("|");
+        const target = parts[parts.length - 1].trim();
+        const label =
+          parts.length > 1 ? parts.slice(0, -1).join("|").trim() : "";
 
         const sourceId = source.trim().split(/[\s([{]|-->./)[0];
-        const targetId = target.trim().split(/[\s([{]|-->./)[0];
+        const targetId = target.split(/[\s([{]|-->./)[0];
 
         if (!adjacencyList[sourceId]) adjacencyList[sourceId] = [];
         adjacencyList[sourceId].push(targetId);
@@ -248,14 +251,16 @@ const FlowchartBuilder = () => {
       const trimmedLine = line.trim();
       if (trimmedLine.includes("-->")) {
         const [source, rest] = trimmedLine.split("-->");
-        const [label, target] = rest.includes("|")
-          ? rest.split("|")
-          : ["", rest];
+
+        // Fix: Correctly parse the target and label
+        const parts = rest.split("|");
+        const target = parts[parts.length - 1].trim();
+        const label =
+          parts.length > 1 ? parts.slice(0, -1).join("|").trim() : "";
 
         const sourceId = source.trim().split(/[\s([{]|-->./)[0];
-        const targetId = target.trim().split(/[\s([{]|-->./)[0];
+        const targetId = target.split(/[\s([{]|-->./)[0];
 
-        // Only create nodes for actual nodes, not edge labels
         if (!newNodes.some((node) => node.id === sourceId))
           createNode(sourceId);
         if (!newNodes.some((node) => node.id === targetId))
@@ -266,7 +271,9 @@ const FlowchartBuilder = () => {
           source: sourceId,
           target: targetId,
           type: "custom",
-          label: label.trim(), // Use label directly on the edge
+          data: {
+            label,
+          },
           markerEnd: {
             type: MarkerType.ArrowClosed,
           },
