@@ -17,7 +17,6 @@ import { useFlowchartState } from "@/hooks/useFlowchartState";
 import { useMermaidCode } from "@/hooks/useMermaidCode";
 import { StateNode, ActionNode, ChoiceNode } from "./nodes";
 import CustomEdge from "./edges";
-import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -139,46 +138,142 @@ const FlowchartBuilder = () => {
     [setEdges]
   );
 
-  // Function to parse Mermaid code and create nodes/edges
   const parseMermaidCode = (mermaidCode: string) => {
     const lines = mermaidCode.split("\n");
     const newNodes: Node[] = [];
     const newEdges: Edge[] = [];
-    const nodeMap: { [key: string]: boolean } = {};
+    const nodeMap: {
+      [key: string]: {
+        depth: number;
+        column: number;
+        type: string;
+        label: string;
+      };
+    } = {};
+    const adjacencyList: { [key: string]: string[] } = {};
 
+    const getNodeType = (line: string): "state" | "action" | "choice" => {
+      if (line.includes("((") && line.includes("))")) return "state";
+      if (line.includes("[") && line.includes("]")) return "action";
+      if (line.includes("{") && line.includes("}")) return "choice";
+      return "state"; // default to state if unclear
+    };
+
+    // First pass: create adjacency list and identify all nodes
+    lines.forEach((line) => {
+      const trimmedLine = line.trim();
+      if (trimmedLine.includes("-->")) {
+        const [source, rest] = trimmedLine.split("-->");
+        const [, target] = rest.includes("|") ? rest.split("|") : ["", rest];
+
+        console.log(source, target);
+
+        const sourceId = source.trim().split(/[\s([{]|-->./)[0];
+        const targetId = target.trim().split(/[\s([{]|-->./)[0];
+
+        if (!adjacencyList[sourceId]) adjacencyList[sourceId] = [];
+        adjacencyList[sourceId].push(targetId);
+
+        if (!nodeMap[sourceId])
+          nodeMap[sourceId] = {
+            depth: 0,
+            column: 0,
+            type: getNodeType(source),
+            label: source.trim(),
+          };
+        if (!nodeMap[targetId])
+          nodeMap[targetId] = {
+            depth: 0,
+            column: 0,
+            type: getNodeType(target),
+            label: target.trim(),
+          };
+      } else if (trimmedLine && !trimmedLine.startsWith("graph")) {
+        const id = trimmedLine.split(/[\s([{]/)[0];
+        if (!nodeMap[id])
+          nodeMap[id] = {
+            depth: 0,
+            column: 0,
+            type: getNodeType(trimmedLine),
+            label: trimmedLine,
+          };
+      }
+    });
+
+    // Perform a topological sort and assign depths
+    const visited: { [key: string]: boolean } = {};
+    const assignDepth = (nodeId: string, depth: number) => {
+      if (visited[nodeId]) return;
+      visited[nodeId] = true;
+      nodeMap[nodeId].depth = Math.max(nodeMap[nodeId].depth, depth);
+      (adjacencyList[nodeId] || []).forEach((childId) =>
+        assignDepth(childId, depth + 1)
+      );
+    };
+
+    Object.keys(nodeMap).forEach((nodeId) => assignDepth(nodeId, 0));
+
+    // Assign columns to nodes
+    const depthMap: { [depth: number]: string[] } = {};
+    Object.entries(nodeMap).forEach(([nodeId, data]) => {
+      if (!depthMap[data.depth]) depthMap[data.depth] = [];
+      depthMap[data.depth].push(nodeId);
+    });
+
+    Object.values(depthMap).forEach((nodesAtDepth, depth) => {
+      nodesAtDepth.forEach((nodeId, index) => {
+        nodeMap[nodeId].column = index;
+      });
+    });
+
+    // Create nodes with positions based on depth and column
+    const cellWidth = 300;
+    const cellHeight = 200;
+
+    const createNode = (id: string) => {
+      const { depth, column, type, label } = nodeMap[id];
+      const x = column * cellWidth + Math.random() * 50 - 25;
+      const y = depth * cellHeight + Math.random() * 50 - 25;
+
+      newNodes.push({
+        id,
+        type,
+        position: { x, y },
+        data: { label },
+      });
+    };
+
+    // Second pass: create nodes and edges
     lines.forEach((line, index) => {
       const trimmedLine = line.trim();
       if (trimmedLine.includes("-->")) {
-        const [source, target] = trimmedLine.split("-->").map((s) => s.trim());
+        const [source, rest] = trimmedLine.split("-->");
+        const [label, target] = rest.includes("|")
+          ? rest.split("|")
+          : ["", rest];
+
+        const sourceId = source.trim().split(/[\s([{]|-->./)[0];
+        const targetId = target.trim().split(/[\s([{]|-->./)[0];
+
+        // Only create nodes for actual nodes, not edge labels
+        if (!newNodes.some((node) => node.id === sourceId))
+          createNode(sourceId);
+        if (!newNodes.some((node) => node.id === targetId))
+          createNode(targetId);
+
         newEdges.push({
           id: `e${index}`,
-          source,
-          target,
+          source: sourceId,
+          target: targetId,
           type: "custom",
-          markerEnd: { type: MarkerType.ArrowClosed },
+          label: label.trim(), // Use label directly on the edge
+          markerEnd: {
+            type: MarkerType.ArrowClosed,
+          },
         });
       } else if (trimmedLine && !trimmedLine.startsWith("graph")) {
-        let id, label;
-        if (trimmedLine.includes("[")) {
-          [id, label] = trimmedLine.split("[");
-          label = label.slice(0, -1); // Remove the closing bracket
-        } else {
-          id = trimmedLine;
-          label = trimmedLine;
-        }
-        id = id.trim();
-        if (!nodeMap[id]) {
-          newNodes.push({
-            id: id,
-            type: "action", // Default to action type
-            position: {
-              x: 100 * (newNodes.length + 1),
-              y: 100 * (newNodes.length + 1),
-            },
-            data: { label: label || id },
-          });
-          nodeMap[id] = true;
-        }
+        const id = trimmedLine.split(/[\s([{]/)[0];
+        if (!newNodes.some((node) => node.id === id)) createNode(id);
       }
     });
 
@@ -240,6 +335,8 @@ const FlowchartBuilder = () => {
               whiteSpace: "pre-wrap",
               wordBreak: "break-all",
               marginTop: "10px",
+              maxHeight: "200px",
+              overflowY: "auto",
             }}
           >
             {mermaidCode}
