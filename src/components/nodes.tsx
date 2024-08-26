@@ -67,6 +67,9 @@ const NodeWrapper: React.FC<NodeProps<NodeData>> = ({ id, data, type }) => {
           ...baseStyle,
           backgroundColor: isHovered ? "#ffcce3" : "#e6e6fa",
           borderColor: "#784be8",
+          borderRadius: "50%", // Make it oval
+          width: "200px", // Adjust width for oval shape
+          height: "120px", // Adjust height for oval shape
         };
       case "actionNode":
         return {
@@ -185,10 +188,3 @@ export const ActionNode: React.FC<NodeProps<NodeData>> = ({ id, data }) => (
 export const ChoiceNode: React.FC<NodeProps<NodeData>> = ({ id, data }) => (
   <NodeWrapper id={id} data={data} type="choiceNode" />
 );
-
-// CSS (you can add this to your global CSS or use a CSS-in-JS solution)
-/*
-.customNode {
-  position: relative;
-}
-*/
