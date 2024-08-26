@@ -5,9 +5,10 @@ interface NodeData {
   label: string;
 }
 
-const NodeWrapper: React.FC<NodeProps<NodeData>> = ({ id, data, children }) => {
+const NodeWrapper: React.FC<NodeProps<NodeData>> = ({ id, data, type }) => {
   const [isEditing, setIsEditing] = useState(false);
   const [label, setLabel] = useState(data.label);
+  const [isHovered, setIsHovered] = useState(false);
   const { setNodes } = useReactFlow();
 
   const handleLabelChange = useCallback(
@@ -34,78 +35,157 @@ const NodeWrapper: React.FC<NodeProps<NodeData>> = ({ id, data, children }) => {
     setIsEditing(true);
   }, []);
 
+  const handleMouseEnter = useCallback(() => {
+    setIsHovered(true);
+  }, []);
+
+  const handleMouseLeave = useCallback(() => {
+    setIsHovered(false);
+  }, []);
+
+  const getNodeStyle = (nodeType: string) => {
+    const baseStyle = {
+      width: "180px",
+      height: "100px",
+      border: "3px solid black",
+      borderRadius: "10px",
+      display: "flex",
+      justifyContent: "center",
+      alignItems: "center",
+      fontWeight: "bold",
+      position: "relative" as "relative",
+      overflow: "hidden",
+      transition: "all 0.3s ease",
+      padding: "10px",
+      fontSize: "14px",
+    };
+
+    switch (nodeType) {
+      case "stateNode":
+        return {
+          ...baseStyle,
+          backgroundColor: isHovered ? "#ffcce3" : "#e6e6fa",
+          borderColor: "#784be8",
+        };
+      case "actionNode":
+        return {
+          ...baseStyle,
+          backgroundColor: isHovered ? "#ffcce3" : "#e6f2ff",
+          borderColor: "#3b82f6",
+        };
+      case "choiceNode":
+        return {
+          ...baseStyle,
+          backgroundColor: isHovered ? "#ffcce3" : "#e6fff0",
+          borderColor: "#10b981",
+          transform: "rotate(45deg)",
+          width: "120px",
+          height: "120px",
+        };
+      default:
+        return baseStyle;
+    }
+  };
+
+  const handleStyle = {
+    width: "100%",
+    height: "100%",
+    background: "transparent",
+    position: "absolute" as "absolute",
+    top: 0,
+    left: 0,
+    borderRadius: 0,
+    transform: "none",
+    border: "none",
+    opacity: 0,
+  };
+
   return (
-    <div onDoubleClick={handleDoubleClick}>
-      {React.cloneElement(children as React.ReactElement, {
-        children: isEditing ? (
-          <input
-            type="text"
-            value={label}
-            onChange={handleLabelChange}
-            onBlur={handleBlur}
-            autoFocus
-            className="nodrag w-full bg-transparent text-center focus:outline-none"
-          />
-        ) : (
-          data.label
-        ),
-      })}
-      <Handle
-        type="source"
-        position={Position.Bottom}
-        id="a"
-        style={{
-          bottom: "-15px",
-          left: "50%",
-          transform: "translateX(-50%)",
-          width: "30px",
-          height: "30px",
-          borderRadius: "50%",
-          background: "#784be8",
-          border: "3px solid #fff",
-          boxShadow: "0 0 10px rgba(0, 0, 0, 0.3)",
-        }}
-        isConnectable={true}
-      />
+    <div
+      className="customNode"
+      onDoubleClick={handleDoubleClick}
+      onMouseEnter={handleMouseEnter}
+      onMouseLeave={handleMouseLeave}
+    >
+      <div className="customNodeBody" style={getNodeStyle(type)}>
+        <Handle
+          className="customHandle"
+          position={Position.Right}
+          type="source"
+          style={handleStyle}
+        />
+        <Handle
+          className="customHandle"
+          position={Position.Left}
+          type="target"
+          style={handleStyle}
+        />
+        <div
+          style={{
+            ...(type === "choiceNode" ? { transform: "rotate(-45deg)" } : {}),
+            width: "100%",
+            height: "100%",
+            display: "flex",
+            flexDirection: "column",
+            justifyContent: "center",
+            alignItems: "center",
+            textAlign: "center",
+          }}
+        >
+          {isEditing ? (
+            <input
+              type="text"
+              value={label}
+              onChange={handleLabelChange}
+              onBlur={handleBlur}
+              autoFocus
+              className="nodrag w-full bg-transparent text-center focus:outline-none"
+              style={{ fontSize: "14px" }}
+            />
+          ) : (
+            <>
+              <div style={{ marginBottom: "5px", wordBreak: "break-word" }}>
+                {data.label}
+              </div>
+              <small style={{ fontSize: "12px" }}>
+                {isHovered ? "Connect" : "Drag to connect"}
+              </small>
+            </>
+          )}
+        </div>
+      </div>
     </div>
   );
 };
 
 export const StateNode: React.FC<NodeProps<NodeData>> = ({ id, data }) => (
-  <NodeWrapper id={id} data={data}>
-    <div className="px-4 py-2 shadow-md rounded-full bg-gray-200 w-20 h-20 flex items-center justify-center">
-      <div className="w-full text-center">{data.label}</div>
-    </div>
-  </NodeWrapper>
+  <NodeWrapper id={id} data={data} type="stateNode" />
 );
 
 export const ActionNode: React.FC<NodeProps<NodeData>> = ({ id, data }) => (
-  <NodeWrapper id={id} data={data}>
-    <div className="px-4 py-2 shadow-md rounded-md bg-blue-200">
-      <div className="w-full text-center">{data.label}</div>
-    </div>
-  </NodeWrapper>
+  <NodeWrapper id={id} data={data} type="actionNode" />
 );
 
 export const ChoiceNode: React.FC<NodeProps<NodeData>> = ({ id, data }) => (
-  <NodeWrapper id={id} data={data}>
-    <div
-      className="px-4 py-2 shadow-md bg-green-200"
-      style={{
-        transform: "rotate(45deg)",
-        width: "100px",
-        height: "100px",
-        display: "flex",
-        alignItems: "center",
-        justifyContent: "center",
-      }}
-    >
-      <div
-        style={{ transform: "rotate(-45deg)", width: "100%" }}
-        className="text-center"
-      >
-        {data.label}
-      </div>
-    </div>
-  </NodeWrapper>
+  <NodeWrapper id={id} data={data} type="choiceNode" />
 );
+
+// CSS (you can add this to your global CSS or use a CSS-in-JS solution)
+/*
+.customNode:before {
+  content: '';
+  position: absolute;
+  top: -10px;
+  left: 50%;
+  height: 20px;
+  width: 40px;
+  transform: translate(-50%, 0);
+  background: #d6d5e6;
+  z-index: 1000;
+  line-height: 1;
+  border-radius: 4px;
+  color: #fff;
+  font-size: 9px;
+  border: 2px solid #222138;
+}
+*/
