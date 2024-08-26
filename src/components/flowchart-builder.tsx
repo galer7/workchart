@@ -263,8 +263,8 @@ const FlowchartBuilder = () => {
         // Fix: Correctly parse the target and label
         const parts = rest.split("|");
         const target = parts[parts.length - 1].trim();
-        const label =
-          parts.length > 1 ? parts.slice(0, -1).join("|").trim() : "";
+        const label = parts.length > 1 ? parts[2] : "";
+        console.log("check", source, target, parts, label);
 
         const sourceId = source.trim().split(/[\s([{]|-->./)[0];
         const targetId = target.split(/[\s([{]|-->./)[0];
