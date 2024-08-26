@@ -53,11 +53,12 @@ const NodeWrapper: React.FC<NodeProps<NodeData>> = ({ id, data, type }) => {
       justifyContent: "center",
       alignItems: "center",
       fontWeight: "bold",
-      position: "relative" as "relative",
-      overflow: "hidden",
+      position: "relative" as const,
+      overflow: "visible",
       transition: "all 0.3s ease",
       padding: "10px",
       fontSize: "14px",
+      cursor: "move",
     };
 
     switch (nodeType) {
@@ -87,17 +88,26 @@ const NodeWrapper: React.FC<NodeProps<NodeData>> = ({ id, data, type }) => {
     }
   };
 
-  const handleStyle = {
-    width: "100%",
-    height: "100%",
-    background: "transparent",
-    position: "absolute" as "absolute",
-    top: 0,
-    left: 0,
-    borderRadius: 0,
-    transform: "none",
-    border: "none",
+  const topHandleStyle = {
+    width: "40px",
+    height: "20px",
+    background: "#d6d5e6",
+    top: "-20px",
+    left: "50%",
+    transform: "translateX(-50%)",
+    borderRadius: "4px 4px 0 0",
+    border: "2px solid #222138",
+    borderBottom: "none",
+    zIndex: 1000,
+  };
+
+  const hiddenHandleStyle = {
     opacity: 0,
+    width: "100%",
+    height: "50%",
+    background: "transparent",
+    border: "none",
+    pointerEvents: "none",
   };
 
   return (
@@ -107,18 +117,24 @@ const NodeWrapper: React.FC<NodeProps<NodeData>> = ({ id, data, type }) => {
       onMouseEnter={handleMouseEnter}
       onMouseLeave={handleMouseLeave}
     >
+      <Handle
+        type="source"
+        position={Position.Top}
+        style={topHandleStyle}
+        isConnectable={true}
+      />
       <div className="customNodeBody" style={getNodeStyle(type)}>
         <Handle
-          className="customHandle"
-          position={Position.Right}
-          type="source"
-          style={handleStyle}
+          type="target"
+          position={Position.Left}
+          style={{ ...hiddenHandleStyle, left: -3 }}
+          isConnectable={true}
         />
         <Handle
-          className="customHandle"
-          position={Position.Left}
-          type="target"
-          style={handleStyle}
+          type="source"
+          position={Position.Right}
+          style={{ ...hiddenHandleStyle, right: -3 }}
+          isConnectable={true}
         />
         <div
           style={{
@@ -148,7 +164,7 @@ const NodeWrapper: React.FC<NodeProps<NodeData>> = ({ id, data, type }) => {
                 {data.label}
               </div>
               <small style={{ fontSize: "12px" }}>
-                {isHovered ? "Connect" : "Drag to connect"}
+                {isHovered ? "Drag to move" : "Double-click to edit"}
               </small>
             </>
           )}
@@ -172,20 +188,7 @@ export const ChoiceNode: React.FC<NodeProps<NodeData>> = ({ id, data }) => (
 
 // CSS (you can add this to your global CSS or use a CSS-in-JS solution)
 /*
-.customNode:before {
-  content: '';
-  position: absolute;
-  top: -10px;
-  left: 50%;
-  height: 20px;
-  width: 40px;
-  transform: translate(-50%, 0);
-  background: #d6d5e6;
-  z-index: 1000;
-  line-height: 1;
-  border-radius: 4px;
-  color: #fff;
-  font-size: 9px;
-  border: 2px solid #222138;
+.customNode {
+  position: relative;
 }
 */
